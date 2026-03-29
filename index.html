@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta charset="UTF-8" />
+  <title>Grid Game</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f172a;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 16px;
+    }
+
+    /* Title */
+    h2 {
+      margin-bottom: 10px;
+    }
+
+    /* Bingo Progress */
+    #bingoText {
+      font-size: 24px;
+      letter-spacing: 8px;
+      margin-bottom: 15px;
+    }
+
+    /* Grid */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      width: 100%;
+      max-width: 420px;
+    }
+
+    /* Inputs + Buttons */
+    input,
+    button {
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      /* perfect square */
+      font-size: 18px;
+      border-radius: 12px;
+      border: none;
+      text-align: center;
+    }
+
+    /* Input style */
+    input {
+      background: #1e293b;
+      color: white;
+    }
+
+    /* Button style */
+    button {
+      background: #1e293b;
+      color: white;
+      transition: 0.2s;
+    }
+
+    /* Clicked */
+    button.clicked {
+      background: #22c55e;
+      color: black;
+    }
+
+    /* Disabled */
+    button:disabled {
+      background: #475569;
+    }
+
+    /* Start button */
+    #startBtn {
+      display: block;
+      margin: 20px auto;
+      padding: 12px 20px;
+      background-color: rgb(138, 138, 240);
+      width: fit-content;
+      /* 👈 best modern approach */
+    }
+  </style>
+</head>
+
+<body>
+
+  <h2>Fill Numbers First</h2>
+  <h2 id="bingoText">B I N G O</h2>
+  <div class="grid" id="grid"></div>
+  <button id="startBtn">Start Game</button>
+
+  <script>
+    let completedLines = 0;
+    const completedRowSet = new Set();
+    const completedColSet = new Set();
+    const size = 5;
+    const gridValues = [];
+    const clicked = [];
+    const disabledRows = new Set();
+    const disabledCols = new Set();
+    const bingo = "BINGO";
+
+    const gridContainer = document.getElementById("grid");
+    const startBtn = document.getElementById("startBtn");
+
+    // Create input grid
+    for (let i = 0; i < size; i++) {
+      gridValues[i] = [];
+      clicked[i] = [];
+
+      for (let j = 0; j < size; j++) {
+        const input = document.createElement("input");
+        input.addEventListener("keydown", (event) => {
+          if (event.key === "Enter") {
+            const next = input.nextElementSibling;
+            if (next) next.focus();
+          }
+        });
+        input.type = "number";
+
+        gridContainer.appendChild(input);
+
+        gridValues[i][j] = input;
+        clicked[i][j] = false;
+      }
+    }
+
+    startBtn.addEventListener("click", startGame);
+
+    function startGame() {
+      // Validate all filled
+      for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+          if (gridValues[i][j].value === "") {
+            alert("Fill all boxes first!");
+            return;
+          }
+        }
+      }
+
+      const allValues = [];
+
+      for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+          const val = gridValues[i][j].value;
+          if (allValues.includes(val)) {
+            alert("Duplicate numbers not allowed");
+            return;
+          }
+          allValues.push(val);
+        }
+      }
+
+      // Convert inputs → buttons
+      gridContainer.innerHTML = "";
+
+      for (let i = 0; i < size; i++) {
+        for (let j = 0; j < size; j++) {
+          const btn = document.createElement("button");
+          btn.textContent = gridValues[i][j].value;
+
+          btn.addEventListener("click", () => handleClick(i, j, btn));
+
+          gridContainer.appendChild(btn);
+        }
+      }
+
+      startBtn.style.display = "none";
+
+
+    }
+
+    function updateBingoText() {
+      const text = bingo
+        .split("")
+        .map((char, i) => (i < completedLines ? char : "_"))
+        .join(" ");
+
+      document.getElementById("bingoText").textContent = text;
+    }
+
+    function handleClick(row, col, btn) {
+      if (clicked[row][col] || disabledRows.has(row) || disabledCols.has(col)) {
+        return;
+      }
+
+      clicked[row][col] = true;
+      btn.classList.add("clicked");
+
+      const buttons = document.querySelectorAll(".grid button");
+
+      // ✅ Row check
+      const isRowFull = clicked[row].every(val => val === true);
+      if (isRowFull && !completedRowSet.has(row)) {
+        completedRowSet.add(row);
+        completedLines++;
+
+        disabledRows.add(row);
+        for (let j = 0; j < size; j++) {
+          const index = row * size + j;
+          buttons[index].disabled = true;
+        }
+      }
+
+      // ✅ Column check
+      const isColFull = clicked.every(r => r[col] === true);
+      if (isColFull && !completedColSet.has(col)) {
+        completedColSet.add(col);
+        completedLines++;
+
+        disabledCols.add(col);
+        for (let i = 0; i < size; i++) {
+          const index = i * size + col;
+          buttons[index].disabled = true;
+        }
+      }
+
+      updateBingoText()
+
+      // 🎉 WIN CHECK
+      if (completedLines >= 5) {
+        setTimeout(() => {
+          alert("🎉 BINGO! You Win!");
+        }, 100);
+      }
+
+
+    }
+  </script>
+
+</body>
+
+</html>
